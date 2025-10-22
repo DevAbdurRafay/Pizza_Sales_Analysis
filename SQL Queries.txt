@@ -1,0 +1,128 @@
+SELECT * FROM pizza_orders;
+
+CREATE TABLE pizza_orders (
+    pizza_id SERIAL PRIMARY KEY,
+    order_id BIGINT NOT NULL,
+    pizza_name_id VARCHAR(100) NOT NULL,
+    quantity INT,
+    order_date DATE,
+    order_time TIME,
+    unit_price NUMERIC(10, 2),
+    total_price NUMERIC(10, 2),
+    pizza_size VARCHAR(100),
+    pizza_category VARCHAR(100),
+    pizza_ingredients VARCHAR(400),
+    pizza_name VARCHAR(100)
+);
+
+COPY pizza_orders(pizza_id, order_id, pizza_name_id, quantity, order_date, order_time, unit_price, total_price, pizza_size, pizza_category, pizza_ingredients, pizza_name)
+FROM 'C:\Program Files\PostgreSQL\18\pizza_sales_excel_file.csv'
+DELIMITER ','
+CSV HEADER;
+
+-- Important Insights KPI
+-- Total Revenue by pizza sales
+SELECT SUM(total_price) AS Total_Revenue FROM pizza_orders; 
+
+-- Average Order Value
+SELECT CAST((SUM(total_price) / COUNT(DISTINCT order_id)) AS NUMERIC(10,2)) AS Average_Order
+FROM pizza_orders;
+
+-- Total Orders
+SELECT COUNT(DISTINCT(order_id)) AS total_orders
+FROM pizza_orders;
+
+-- Average Pizza per order
+SELECT 
+    CAST(SUM(quantity) / COUNT(DISTINCT order_id) AS NUMERIC(10, 2)) AS Average_Pizza_Per_Order
+FROM pizza_orders;
+
+-- Average Quantity per day
+SELECT CAST(AVG(daily_sales) AS Numeric(10,2)) AS average_quantity_per_day
+FROM (
+    SELECT order_date, SUM(quantity) AS daily_sales
+    FROM pizza_orders
+    GROUP BY order_date
+) AS daily_sales_data;
+
+-- Average Revenue per day
+SELECT CAST(AVG(daily_sales) AS Numeric(10,2)) AS average_revenue_per_day
+FROM (
+    SELECT order_date, SUM(total_price) AS daily_sales
+    FROM pizza_orders
+    GROUP BY order_date
+) AS daily_sales_data;
+
+-------------------------------------------------------------------------
+
+-- Best Selling In Demand Pizza
+SELECT pizza_name, pizza_category, SUM(quantity) AS pizza_sold , SUM(total_price) AS Revenue 
+FROM pizza_orders
+GROUP BY pizza_name, pizza_category 
+ORDER BY pizza_sold DESC
+LIMIT 5;
+
+-- Worst Selling Un Demand Pizza
+SELECT pizza_name, pizza_category, SUM(quantity) AS pizza_sold , SUM(total_price) AS Revenue 
+FROM pizza_orders
+GROUP BY pizza_name, pizza_category 
+ORDER BY pizza_sold ASC
+LIMIT 5;
+
+-- ORDER BY Hour ( Peak time )
+SELECT TO_CHAR(order_time, 'HH PM') AS Hour, COUNT(DISTINCT order_id) AS Orders
+FROM pizza_orders
+GROUP BY Hour
+ORDER BY Orders DESC;
+
+-- Graphs Requirements
+
+-- Revenue by category (Bar/Column Chart)
+SELECT pizza_category , SUM(total_price) AS revenue_per_category
+FROM pizza_orders
+GROUP BY pizza_category
+ORDER BY revenue_per_category DESC;
+
+-- Orders by day name (Bar Chart)
+SELECT TO_CHAR(order_date, 'Day') AS day, COUNT(DISTINCT order_id) AS orders
+FROM pizza_orders
+GROUP BY day;
+
+-- Orders by month name (Line/ Area Chart)
+SELECT TO_CHAR(order_date, 'Month') AS Month, COUNT(DISTINCT order_id) AS orders
+FROM pizza_orders
+GROUP BY Month;
+
+-- Percentage Sold by category (Pie/Dounut Chart)
+SELECT 
+    pizza_category,
+    ROUND((SUM(total_price) * 100.0 / CAST(SUM(SUM(total_price)) OVER () AS Numeric(10,2))), 2) AS sales_percentage
+FROM pizza_orders
+GROUP BY pizza_category
+ORDER BY sales_percentage DESC;
+
+-- Filter BY Month 
+SELECT 
+    pizza_category,
+    ROUND((SUM(total_price) * 100.0 / CAST(SUM(SUM(total_price)) OVER () AS Numeric(10,2))), 2) AS sales_percentage
+FROM pizza_orders
+WHERE EXTRACT(MONTH FROM order_date) = 1  -- Filter for the Month
+GROUP BY pizza_category
+ORDER BY sales_percentage DESC;
+
+-- Filter BY Quarter
+SELECT 
+    pizza_category,
+    ROUND((SUM(total_price) * 100.0 / CAST(SUM(SUM(total_price)) OVER () AS Numeric(10,2))), 2) AS sales_percentage
+FROM pizza_orders
+WHERE EXTRACT(QUARTER FROM order_date) = 1  -- Filter for the Quarter
+GROUP BY pizza_category
+ORDER BY sales_percentage DESC;
+
+
+
+
+
+
+
+
